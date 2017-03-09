@@ -1,3 +1,4 @@
+import Foundation
 import Fluent
 import MongoKitten
 
@@ -9,14 +10,15 @@ public class MongoKittenDriver: Fluent.Driver {
     let database: MongoKitten.Database
 
     convenience public init(mongoURL: String = "mongodb://localhost:27017") throws {
-        let url = NSURL(string: mongoURL)
-        let databaseName = url.path.substring(from: 1)
-        self.init(mongoURL, databaseName)
+        let url = NSURL(string: mongoURL)!
+        let path = url.path!
+        let databaseName = path.substring(from: path.index(path.startIndex, offsetBy: 1))
+        try self.init(mongoURL: mongoURL, databaseName: databaseName)
     }
 
     convenience public init(mongoURL: String = "mongodb://localhost:27017", databaseName: String) throws {
-        let server = try Server(mongoURL: mongoURL)
-        self.init(server[databaseName])
+        let server = try Server(mongoURL)
+        self.init(database: server[databaseName])
     }
 
     private init(database: MongoKitten.Database) {
@@ -88,12 +90,12 @@ public class MongoKittenDriver: Fluent.Driver {
         case (_, 0):
             // Limit 0: delete all matching documents
             let aqt = try query.makeAQT()
-            let mkq = MKQuery(aqt: aqt)
+            let mkq = MongoKitten.Query(aqt: aqt)
             try database[query.entity].remove(matching: mkq)
         case (_, 1):
             // Limit 1: delete first matching document
             let aqt = try query.makeAQT()
-            let mkq = MKQuery(aqt: aqt)
+            let mkq = MongoKitten.Query(aqt: aqt)
             try database[query.entity].remove(matching: mkq, limitedTo: 1, stoppingOnError: true)
         case (_, _):
             throw Error.unsupported("Mongo only supports limit 0 (all documents) or limit 1 (single document) for deletes")
@@ -120,7 +122,7 @@ public class MongoKittenDriver: Fluent.Driver {
         let cursor: Cursor<Document>
 
         let aqt = try query.makeAQT()
-        let mkq = MKQuery(aqt: aqt)
+        let mkq = MongoKitten.Query(aqt: aqt)
         let sortDocument: Document?
 
         if !query.sorts.isEmpty {
@@ -150,7 +152,7 @@ public class MongoKittenDriver: Fluent.Driver {
 
 
         let aqt = try query.makeAQT()
-        let mkq = MKQuery(aqt: aqt)
+        let mkq = MongoKitten.Query(aqt: aqt)
 
         var document: Document = [:]
 

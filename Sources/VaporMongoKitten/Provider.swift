@@ -1,45 +1,34 @@
 import Vapor
 
 public final class Provider: Vapor.Provider {
-    /**
-        Mongo database driver created by the provider.
-    */
     public let driver: MongoKittenDriver
-
-    /**
-        Mongo database created by the provider.
-    */
     public let database: Database
 
     public enum Error: Swift.Error {
         case config(String)
+        case unsupported(String)
     }
 
-    public init(database: String, user: String, password: String, host: String, port: Int) throws {
-        guard let escapedUser = user.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
-          throw Error.unsupported("Failed to percent encode username")
-        }
-        guard let escapedPassword = password.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
-          throw Error.unsupported("Failed to percent encode password")
-        }
-        let server = try Server("mongodb://\(escapedUser):\(escapedPassword)@\(host):\(port)", automatically: true)
-        self.database = server[database]
-    }
-
-
-    /**
-        Creates a new `MongoDriver` with
-        the given database name, credentials, and port.
-    */
-    public init(mongoURL: String) throws {
+    public init(withMongoURL mongoURL: String) throws {
         let driver = try MongoKittenDriver(mongoURL: mongoURL)
         self.driver = driver
-        self.database = Database(driver)
+        self.database = Fluent.Database(driver)
+    }
+
+    public convenience init(database: String, user: String, password: String, host: String, port: Int) throws {
+        guard let escapedUser = user.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
+            throw Error.unsupported("Failed to percent encode username")
+        }
+        guard let escapedPassword = password.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
+            throw Error.unsupported("Failed to percent encode password")
+        }
+        try self.init(withMongoURL: "mongodb://\(escapedUser):\(escapedPassword)@\(host):\(port)")
     }
 
     public convenience init(config: Config) throws {
-        if let url = config["url"] {
-            try self.init(config["url"])
+        if let url = config["url"]?.string {
+            try self.init(withMongoURL: url)
+
         } else {
 
             guard let mongo = config["mongo"]?.object else {
